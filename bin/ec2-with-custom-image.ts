@@ -1,21 +1,27 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
-import * as cdk from 'aws-cdk-lib';
-import { Ec2WithCustomImageStack } from '../lib/ec2-with-custom-image-stack';
+import { ImagePipelineStack } from '../lib/image-pipeline-stack';
+import { ComponentStack } from '../lib/components-stack';
+import { App } from 'aws-cdk-lib';
+import { AmazonLinuxGeneration } from 'aws-cdk-lib/aws-ec2';
 
-const app = new cdk.App();
-new Ec2WithCustomImageStack(app, 'Ec2WithCustomImageStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
+const app = new App();
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+const componentStack = new ComponentStack(app, 'ComponentStack');
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+const imagePipelineStack = new ImagePipelineStack(app, 'ImagePipelineStack', {
+  baseImageProps: {
+    generation: AmazonLinuxGeneration.AMAZON_LINUX_2,
+  },
+  customComponents: {
+    bucket: componentStack.bucket,
+    components: componentStack.components
+  },
+  managedComponents: [
+    `arn:aws:imagebuilder:${process.env.CDK_DEFAULT_REGION}:aws:component/stig-build-linux-high/2022.4.0`
+  ],
+  recipeVersion: '1.0.0',
+  schedule: 'cron(0 0 ? * * *)' // 'cron(0 10 ? * mon *)' // Every Monday at 10:00 UTC
 });
+
+imagePipelineStack.addDependency(componentStack);

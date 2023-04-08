@@ -1,0 +1,12 @@
+name: InstallJava
+description: This document installs java
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: InstallJava
+        action: ExecuteBash
+        inputs:
+          commands:
+            - yum update -y
+            - yum install -y java-17-amazon-corretto
